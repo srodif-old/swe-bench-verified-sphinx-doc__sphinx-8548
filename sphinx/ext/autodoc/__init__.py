@@ -756,6 +756,34 @@ class Documenter:
                     # keep documented attributes
                     keep = True
                 isattr = True
+            elif self.options.inherited_members and inspect.isclass(self.object):
+                # Check if the attribute is documented in base class namespaces
+                found_in_base = False
+                for base_cls in self.object.__mro__[1:]:  # skip self.object (first in MRO)
+                    # Construct base class namespace by replacing the last component of objpath
+                    if self.objpath:
+                        base_objpath = self.objpath[:-1] + [base_cls.__name__]
+                        base_namespace = '.'.join(base_objpath)
+                    else:
+                        # For module-level classes, just use the class name
+                        base_namespace = base_cls.__name__
+                    
+                    if (base_namespace, membername) in attr_docs:
+                        found_in_base = True
+                        break
+                
+                if found_in_base:
+                    if want_all and isprivate:
+                        if self.options.private_members is None:
+                            keep = False
+                        else:
+                            keep = membername in self.options.private_members
+                    else:
+                        # keep documented inherited attributes
+                        keep = True
+                    isattr = True
+                else:
+                    keep = False
             elif want_all and isprivate:
                 if has_doc or self.options.undoc_members:
                     if self.options.private_members is None:
